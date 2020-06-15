@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-
-	"golang.org/x/text/encoding/charmap"
+	"strings"
 )
 
 // CopyFile 文件复制
@@ -29,23 +28,18 @@ func CopyFile(dstName, srcName string) (writeen int64, err error) {
 }
 
 func main() {
-	CopyFile("/Users/yongfu/git/github.com/rickiel/nginx-config-formatter/test1/a.txt", "/Users/yongfu/git/github.com/rickiel/nginx-config-formatter/test1/b.txt")
-	fmt.Println("copy done.")
+	/*
+		1. 在 ;(\s*)# 情况进行分行
+		2. 碰到多于一个分号(;)时, 需要分行, 但是引号内的分号(;)不能计算
+		3.  {} 的分解
+	*/
+	s := "sld{kfl; skd;}jfl;   \n# lskdf {jladkf;} #lsdkf; dfl;"
+	lines := strings.Split(s, "\n")
 
-	f, err := os.Open("/Users/yongfu/git/github.com/rickiel/nginx-config-formatter/test1/gb18030.txt.conf")
-	if err != nil {
-		// handle file open error
+	fmt.Printf("lines: %v\n, len: %v, cap: %v", lines, len(lines), cap(lines))
+
+	if len(lines) > 1 {
+		fmt.Printf("line[0]: %v", lines[0])
 	}
-	out, err := os.Create("my_utf8.txt")
-	if err != nil {
-		// handler error
-	}
 
-	//r := charmap.Windows1252.NewDecoder().Reader(f)
-	r := charmap.Windows1258.NewDecoder().Reader(f)
-
-	io.Copy(out, r)
-
-	out.Close()
-	f.Close()
 }
