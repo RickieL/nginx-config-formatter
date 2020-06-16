@@ -33,13 +33,17 @@ func main() {
 		2. 碰到多于一个分号(;)时, 需要分行, 但是引号内的分号(;)不能计算
 		3.  {} 的分解
 	*/
-	s := "sld{kfl; skd;}jfl;   \n# lskdf {jladkf;} #lsdkf; dfl;"
-	lines := strings.Split(s, "\n")
+	// s := "sld{kfl; skd;}jfl;   \n# lskdf {jladkf;} #lsdkf; dfl;"
+	// lines := strings.Split(s, "\n")
 
-	fmt.Printf("lines: %v\n, len: %v, cap: %v", lines, len(lines), cap(lines))
+	// fmt.Printf("lines: %v\n, len: %v, cap: %v", lines, len(lines), cap(lines))
 
-	if len(lines) > 1 {
-		fmt.Printf("line[0]: %v", lines[0])
-	}
+	// if len(lines) > 1 {
+	// 	fmt.Printf("line[0]: %v", lines[0])
+	// }
 
+	a := "hahaha"
+	b := "hehehe"
+	c := strings.Join([]string{a, b}, ",")
+	println(c)
 }

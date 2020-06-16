@@ -51,9 +51,9 @@ func main() {
 		cli.BoolFlag{
 			Name:     "backup, b",
 			Required: false,
-			Usage:    "是否备份, 默认进行备份",
+			Usage:    "是否备份, 默认为false, 若需要备份请传参 -b",
 		},
-		cli.BoolTFlag{
+		cli.BoolFlag{
 			Name:     "verbose, v",
 			Required: false,
 			Usage:    "是否显示详细信息, 默认不显示详细信息",
@@ -310,7 +310,7 @@ func formatConfigFile(configFilePath string, charset string, blankSpace int, bac
 	}
 
 	// 具体执行配置文件格式化
-	fcNew, err := formatConfigContent(fc, blankSpace)
+	fcNew, err := formatConfigContent(fc, blankSpace, verbose)
 	if err != nil {
 		fmt.Println(err)
 		// 当格式化出错时, 不再进行 格式化后的文件写入到文件
@@ -334,7 +334,7 @@ func formatConfigFile(configFilePath string, charset string, blankSpace int, bac
 
 }
 
-func formatConfigContent(fc string, blankSpace int) (string, error) {
+func formatConfigContent(fc string, blankSpace int, verbose bool) (string, error) {
 	/*
 		1. 将引号内的 {} 进行替换
 		2. 将内容分割为行(\n)
@@ -349,15 +349,36 @@ func formatConfigContent(fc string, blankSpace int) (string, error) {
 
 	// 按行进行分割
 	lines := strings.Split(fc, "\n")
+	if verbose {
+		fmt.Printf("\n==Split:===\n%#v\n=======\n", lines)
+	}
+
 	lines = cleanLines(lines)
+	if verbose {
+		fmt.Printf("\n==cleanLines:===\n%#v\n=======\n", lines)
+	}
+
 	lines = joinOpeningBracket(lines)
+	if verbose {
+		fmt.Printf("\n==joinOpeningBracket:===\n%#v\n=======\n", lines)
+	}
+
 	lines = performIndentation(lines, blankSpace)
+	if verbose {
+		fmt.Printf("\n==performIndentation:===\n%#v\n=======\n", lines)
+	}
 
 	text := strings.Join(lines, "\n")
+	if verbose {
+		fmt.Printf("\n==strings.Join:===\n%#v\n=======\n", text)
+	}
+
 	text = stripBracketTemplateTags(text)
-	re := regexp.MustCompile(`(?m)^\s*$[\r\n]*|[\r\n]+\s+\z`)
-	text = re.ReplaceAllString(text, "\n")
-	return text + "\n", nil
+	if verbose {
+		fmt.Printf("\n==stripBracketTemplateTags:===\n%#v\n=======\n", text)
+	}
+
+	return text, nil
 }
 
 func stripBracketTemplateTags(content string) string {
@@ -367,7 +388,7 @@ func stripBracketTemplateTags(content string) string {
 }
 
 func performIndentation(lines []string, blankSpace int) []string {
-	newLines := make([]string, 0, 2)
+	newLines := make([]string, 0, cap(lines))
 	currentIndent := 0
 	for _, line := range lines {
 		if (!strings.HasPrefix(line, "#")) && strings.HasSuffix(line, "}") && currentIndent > 0 {
@@ -389,16 +410,16 @@ func performIndentation(lines []string, blankSpace int) []string {
 
 // joinOpeningBracket 当 { 为单独一行的时候, 合并到上一行
 func joinOpeningBracket(lines []string) []string {
-	newLines := make([]string, 0, 2)
+	newLines := make([]string, 0, cap(lines))
 
 	lastLine := ""
 	for i, l := range lines {
 		if lastLine != "{" {
-			if i > 0 && l == "{" {
-				newLines = append(newLines, lastLine+" {")
-			} else if i == 0 {
+			if (lastLine == "" && l == "") || i == 0 {
 				lastLine = l
 				continue
+			} else if i > 0 && l == "{" {
+				newLines = append(newLines, lastLine+" {")
 			} else {
 				newLines = append(newLines, lastLine)
 			}
@@ -413,7 +434,7 @@ func joinOpeningBracket(lines []string) []string {
 }
 
 func cleanLines(lines []string) []string {
-	cleanedLines := make([]string, len(lines), cap(lines))
+	cleanedLines := make([]string, 0, cap(lines))
 	for _, l := range lines {
 		l = stripLine(l)
 		if l == "" {
@@ -425,7 +446,7 @@ func cleanLines(lines []string) []string {
 			newLines, ok := decomposeLine(l)
 
 			if ok {
-				nl := make([]string, len(newLines), cap(newLines))
+				nl := make([]string, 0, cap(newLines))
 				nl = cleanAgain(newLines)
 				cleanedLines = append(cleanedLines, nl...)
 			} else {
@@ -437,7 +458,7 @@ func cleanLines(lines []string) []string {
 }
 
 func cleanAgain(lines []string) []string {
-	cleanedLines := make([]string, len(lines), cap(lines))
+	cleanedLines := make([]string, 0, cap(lines))
 	for _, l := range lines {
 		l = stripLine(l)
 		cleanedLines = append(cleanedLines, l)
@@ -468,15 +489,8 @@ func stripLine(l string) string {
 }
 
 func writeNewConfig(Path string, content string) error {
-	f, err := os.OpenFile(Path, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	_, err = io.WriteString(f, content) //写入文件(字符串)
-	if err != nil {
-		return err
-	}
-	return nil
+	text := []byte(content)
+	return ioutil.WriteFile(Path, text, 0644)
 }
 
 // CopyFile 复制文件
