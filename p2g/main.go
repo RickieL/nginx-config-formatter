@@ -18,14 +18,15 @@ import (
  1. 日志记录
  2. verbose模式完善
  3. 测试用例编写
- 4. 首行多一个空行的问题
+ --- 4. 首行多一个空行的问题 ---
+ 5. 支持windows下的换行 (\r\n)
 */
 
 // TemplateOpeningTag 替换正文里的 {
-var TemplateOpeningTag string = "___TEMPLATE_OPENING_TAG___"
+var TemplateOpeningTag = "___TEMPLATE_OPENING_TAG___"
 
 // TemplateClosingTag 替换正文里的 }
-var TemplateClosingTag string = "___TEMPLATE_CLOSING_TAG___"
+var TemplateClosingTag = "___TEMPLATE_CLOSING_TAG___"
 
 func main() {
 	app := cli.NewApp()
