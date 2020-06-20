@@ -18,9 +18,8 @@ import (
  1. 日志记录
  2. verbose模式完善
  3. 测试用例编写
- --- 4. 首行多一个空行的问题 ---
- 5. 支持windows下的换行 (\r\n)
- 6. 通过struct引用的方式传参, 减少参数个数
+ 4. 注释和说明改为中英文方式，新增readme.md文件
+ 5. 传参使用struct方式进行
 */
 
 // TemplateOpeningTag 替换正文里的 {
@@ -28,6 +27,14 @@ var TemplateOpeningTag = "___TEMPLATE_OPENING_TAG___"
 
 // TemplateClosingTag 替换正文里的 }
 var TemplateClosingTag = "___TEMPLATE_CLOSING_TAG___"
+
+type FormatArgs struct {
+	BlankSpace int,
+	Charset string,
+	Backup bool,
+	Verbose bool,
+	Testing bool,
+}
 
 func main() {
 	app := cli.NewApp()
@@ -68,6 +75,7 @@ func main() {
 	}
 
 	app.Action = func(c *cli.Context) error {
+
 		blankSpace := c.Int("space")
 		charset := c.String("charset")
 		backup := c.Bool("backup")
@@ -108,18 +116,6 @@ func checkCharset(s string) bool {
 	return true
 }
 
-// Exists 判断所给路径文件/文件夹是否存在
-func Exists(path string) bool {
-	_, err := os.Stat(path) //os.Stat获取文件信息
-	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
-}
-
 // IsDir 判断所给路径是否为文件夹
 func IsDir(path string) bool {
 	s, err := os.Stat(path)
@@ -135,7 +131,8 @@ func IsFile(path string) bool {
 	if err != nil {
 		return false
 	}
-	return !s.IsDir()
+
+	return s.IsFile()
 }
 
 // ReadAll 读取到file中，再利用ioutil将file直接读取到[]byte中, 这是最优
