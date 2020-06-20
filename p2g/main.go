@@ -20,6 +20,7 @@ import (
  3. 测试用例编写
  --- 4. 首行多一个空行的问题 ---
  5. 支持windows下的换行 (\r\n)
+ 6. 通过struct引用的方式传参, 减少参数个数
 */
 
 // TemplateOpeningTag 替换正文里的 {
