@@ -28,12 +28,13 @@ var TemplateOpeningTag = "___TEMPLATE_OPENING_TAG___"
 // TemplateClosingTag 替换正文里的 }
 var TemplateClosingTag = "___TEMPLATE_CLOSING_TAG___"
 
+// FormatArgs 命令行的参数
 type FormatArgs struct {
-	BlankSpace int,
-	Charset string,
-	Backup bool,
-	Verbose bool,
-	Testing bool,
+	BlankSpace int
+	Charset    string
+	Backup     bool
+	Verbose    bool
+	Testing    bool
 }
 
 func main() {
@@ -76,14 +77,16 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 
-		blankSpace := c.Int("space")
-		charset := c.String("charset")
-		backup := c.Bool("backup")
-		verbose := c.Bool("verbose")
-		testing := c.Bool("testing")
+		var f FormatArgs = FormatArgs{
+			c.Int("space"),
+			c.String("charset"),
+			c.Bool("backup"),
+			c.Bool("verbose"),
+			c.Bool("testing"),
+		}
 
 		// 检查字符集
-		if !checkCharset(charset) {
+		if !checkCharset(f.Charset) {
 			fmt.Printf("不支持的字符集!\n 终止配置文件的格式化!\n")
 			return nil
 		}
@@ -93,7 +96,7 @@ func main() {
 				// 防止传入的文件不存在
 				if IsFile(conf) {
 					// 进行格式化处理
-					formatConfigFile(conf, charset, blankSpace, backup, verbose, testing)
+					f.formatConfigFile(conf)
 				} else {
 					fmt.Printf("文件不存在: %v\n", conf)
 				}
@@ -116,15 +119,6 @@ func checkCharset(s string) bool {
 	return true
 }
 
-// IsDir 判断所给路径是否为文件夹
-func IsDir(path string) bool {
-	s, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return s.IsDir()
-}
-
 // IsFile 判断所给路径是否为文件
 func IsFile(path string) bool {
 	s, err := os.Stat(path)
@@ -132,7 +126,7 @@ func IsFile(path string) bool {
 		return false
 	}
 
-	return s.IsFile()
+	return !s.IsDir()
 }
 
 // ReadAll 读取到file中，再利用ioutil将file直接读取到[]byte中, 这是最优
@@ -193,7 +187,10 @@ func addNewLineString(content string) string {
 	var c []rune
 	c = []rune(content)
 	cLen := len(c) - 1
+	fmt.Printf("cLen: %#v\n", cLen)
 	for i, k := range c {
+
+		fmt.Printf("i:k: %#v, %#v\n", i, string(k))
 		// 判断当前字符为引号,并且是非转义的引号  防止 "aa'bb" 这种情况的错误判断
 		if (k == '"' || k == '\'') && lastC != '\\' {
 			if k != lastQuote && lastQuote == 0 {
@@ -211,9 +208,9 @@ func addNewLineString(content string) string {
 				result += ";\n"
 			} else if k == '{' && i != cLen {
 				result += " {\n"
-			} else if k == '}' && i != cLen && i != 0 {
+			} else if k == '}' && i != 0 {
 				result += "\n}\n"
-			} else if k == '}' && i != cLen && i == 0 {
+			} else if k == '}' && i == 0 {
 				result += "}\n"
 			} else {
 				result += string(k)
@@ -273,7 +270,7 @@ func reverseInQuotesStatus(status bool) bool {
 	return true
 }
 
-func formatConfigFile(configFilePath string, charset string, blankSpace int, backup bool, verbose bool, testing bool) {
+func (f *FormatArgs) formatConfigFile(configFilePath string) {
 	/*
 		1. 首先以正确的编码打开文件
 		2. 然后以正确的编码读取文件
@@ -287,9 +284,9 @@ func formatConfigFile(configFilePath string, charset string, blankSpace int, bac
 
 	// 获取文件内容, 并转换为utf-8编码
 	fc := ReadAll(configFilePath)
-	if charset != "utf-8" {
+	if f.Charset != "utf-8" {
 		// 转换为utf8字符集
-		fc, _ = iconv.ConvertString(fc, charset, "utf-8")
+		fc, _ = iconv.ConvertString(fc, f.Charset, "utf-8")
 	}
 
 	// 判断文件是否为空
@@ -299,7 +296,7 @@ func formatConfigFile(configFilePath string, charset string, blankSpace int, bac
 	}
 
 	// 此方法不用关心原来的字符集是什么, 复制的文件还是原来的字符集.
-	if backup {
+	if f.Backup {
 		_, err := CopyFile(configFilePath, configFilePath+"~")
 		if err != nil {
 			fmt.Println(err)
@@ -309,19 +306,19 @@ func formatConfigFile(configFilePath string, charset string, blankSpace int, bac
 	}
 
 	// 具体执行配置文件格式化
-	fcNew, err := formatConfigContent(fc, blankSpace, verbose)
+	fcNew, err := f.formatConfigContent(fc)
 	if err != nil {
 		fmt.Println(err)
 		// 当格式化出错时, 不再进行 格式化后的文件写入到文件
 		return
 	}
 
-	if testing {
+	if f.Testing {
 		fmt.Println(fcNew)
 	} else {
 		// 进行编码格式转换
-		if charset != "utf-8" {
-			fcNew, _ = iconv.ConvertString(fcNew, "utf-8", charset)
+		if f.Charset != "utf-8" {
+			fcNew, _ = iconv.ConvertString(fcNew, "utf-8", f.Charset)
 		}
 
 		// 写入新文件
@@ -333,7 +330,7 @@ func formatConfigFile(configFilePath string, charset string, blankSpace int, bac
 
 }
 
-func formatConfigContent(fc string, blankSpace int, verbose bool) (string, error) {
+func (f *FormatArgs) formatConfigContent(fc string) (string, error) {
 	/*
 		1. 将引号内的 {} 进行替换
 		2. 将内容分割为行(\n)
@@ -348,32 +345,32 @@ func formatConfigContent(fc string, blankSpace int, verbose bool) (string, error
 
 	// 按行进行分割
 	lines := strings.Split(fc, "\n")
-	if verbose {
+	if f.Verbose {
 		fmt.Printf("\n==Split:===\n%#v\n=======\n", lines)
 	}
 
 	lines = cleanLines(lines)
-	if verbose {
+	if f.Verbose {
 		fmt.Printf("\n==cleanLines:===\n%#v\n=======\n", lines)
 	}
 
 	lines = joinOpeningBracket(lines)
-	if verbose {
+	if f.Verbose {
 		fmt.Printf("\n==joinOpeningBracket:===\n%#v\n=======\n", lines)
 	}
 
-	lines = performIndentation(lines, blankSpace)
-	if verbose {
+	lines = performIndentation(lines, f.BlankSpace)
+	if f.Verbose {
 		fmt.Printf("\n==performIndentation:===\n%#v\n=======\n", lines)
 	}
 
 	text := strings.Join(lines, "\n")
-	if verbose {
+	if f.Verbose {
 		fmt.Printf("\n==strings.Join:===\n%#v\n=======\n", text)
 	}
 
 	text = stripBracketTemplateTags(text)
-	if verbose {
+	if f.Verbose {
 		fmt.Printf("\n==stripBracketTemplateTags:===\n%#v\n=======\n", text)
 	}
 
@@ -417,11 +414,18 @@ func joinOpeningBracket(lines []string) []string {
 			if (lastLine == "" && l == "") || i == 0 {
 				lastLine = l
 				continue
+			} else if lastLine == "" && l == "}" {
+				lastLine = "}"
+				continue
+			} else if strings.HasSuffix(lastLine, "{") && l == "" {
+				continue
 			} else if i > 0 && l == "{" {
 				newLines = append(newLines, lastLine+" {")
 			} else {
 				newLines = append(newLines, lastLine)
 			}
+		} else if lastLine == "{" && l == "" {
+			continue
 		}
 
 		lastLine = l
