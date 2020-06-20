@@ -19,7 +19,9 @@ import (
  2. verbose模式完善
  3. 测试用例编写
  --- 4. 首行多一个空行的问题 ---
- 5. 支持windows下的换行 (\r\n)
+ --- 5. 支持windows下的换行 (\r\n) --- 大部分在windows下仅仅是开发，所以不考虑\r\n的情况
+ 6. 注释和说明改为中英文方式，新增readme.md文件
+ 7. 传参使用struct方式进行
 */
 
 // TemplateOpeningTag 替换正文里的 {
